@@ -27,16 +27,16 @@ class Product with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleFavorite() async {
-    final url = '$DB_URL/products/$id.json';
+  Future<void> toggleFavorite(String token, String userId) async {
+    final url = '$DB_URL/userFavorites/$userId/$id.json?auth=$token';
 
     _setFavorite(!isFavorite);
     try {
-      final response = await http.patch(
+      final response = await http.put(
         url,
-        body: json.encode({
-          'isFavorite': isFavorite,
-        }),
+        body: json.encode(
+          isFavorite,
+        ),
       );
       if (response.statusCode >= 400) _setFavorite(!isFavorite);
     } catch (error) {
@@ -47,8 +47,9 @@ class Product with ChangeNotifier {
 
 class ProductProvider with ChangeNotifier {
   final String authToken;
+  final String userId;
 
-  ProductProvider(this.authToken, this._items);
+  ProductProvider(this.authToken, this.userId, this._items);
 
   List<Product> _items = [
     // Product(
@@ -98,7 +99,8 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> fetchAndSetProducts() async {
-    final url = '$DB_URL/products.json?auth=$authToken';
+    if (authToken.isEmpty) print("Token is NULL: $authToken");
+    var url = '$DB_URL/products.json?auth=$authToken';
 
     try {
       final response = await http.get(url);
@@ -107,6 +109,10 @@ class ProductProvider with ChangeNotifier {
 
       if (extractedData == null) return;
 
+      url = '$DB_URL/userFavorites/$userId.json?auth=$authToken';
+      final favResponse = await http.get(url);
+      final favData = json.decode(favResponse.body);
+
       extractedData.forEach((prodId, prodData) {
         loadedProduct.add(Product(
           id: prodId,
@@ -114,7 +120,7 @@ class ProductProvider with ChangeNotifier {
           description: prodData['description'],
           price: prodData['price'],
           imageUrl: prodData['imageUrl'],
-          isFavorite: prodData['isFavorite'],
+          isFavorite: favData == null ? false : favData[prodId] ?? false,
         ));
       });
 
@@ -126,7 +132,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> addProduct(Product product) async {
-    final url = '$DB_URL/products.json';
+    final url = '$DB_URL/products.json?auth=$authToken';
 
     try {
       final response = await http.post(
@@ -136,7 +142,6 @@ class ProductProvider with ChangeNotifier {
           'description': product.description,
           'imageUrl': product.imageUrl,
           'price': product.price,
-          'isFavorite': product.isFavorite,
         }),
       );
       final newProduct = Product(
@@ -156,7 +161,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> updateProduct(String id, Product newProduct) async {
-    final url = '$DB_URL/products/$id.json';
+    final url = '$DB_URL/products/$id.json?auth=$authToken';
     final prodIndex = _items.indexWhere((prod) => prod.id == id);
 
     if (prodIndex < 0) return;
@@ -175,7 +180,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> deleteProduct(String id) async {
-    final url = '$DB_URL/products/$id.json';
+    final url = '$DB_URL/products/$id.json?auth=$authToken';
     final existingProdIndex = _items.indexWhere((prod) => prod.id == id);
     var existingProd = _items[existingProdIndex];
 

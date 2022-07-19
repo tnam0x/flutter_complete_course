@@ -34,8 +34,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
           if (snapshot.connectionState == ConnectionState.waiting)
             return Center(child: CircularProgressIndicator());
           else {
-            if (snapshot.error != null)
+            if (snapshot.error != null) {
+              print(snapshot.error);
               return Center(child: Text('An error occurred!'));
+            }
             return Consumer<OrdersProvider>(
               builder: (ctx, orderData, child) => ListView.builder(
                 itemCount: orderData.itemCount,

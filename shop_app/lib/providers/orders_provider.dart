@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shop_app/models/Api.dart';
 import 'package:shop_app/providers/cart_provider.dart';
-import 'package:shop_app/widgets/cart_item.dart';
 
 class Order {
   final String id;
@@ -22,7 +21,10 @@ class Order {
 }
 
 class OrdersProvider with ChangeNotifier {
+  String authToken;
   List<Order> _orders = [];
+
+  OrdersProvider(this.authToken, this._orders);
 
   List<Order> get orders {
     return [..._orders];
@@ -31,7 +33,7 @@ class OrdersProvider with ChangeNotifier {
   int get itemCount => _orders.length;
 
   Future<void> fetchAndSetOrders() async {
-    final url = '$DB_URL/orders.json';
+    final url = '$DB_URL/orders.json?auth=$authToken';
     final response = await http.get(url);
     final List<Order> loadedOrders = [];
     final extractedData = json.decode(response.body) as Map<String, dynamic>;
@@ -61,7 +63,7 @@ class OrdersProvider with ChangeNotifier {
   }
 
   Future<void> addOrder(List<Cart> carts, double total) async {
-    final url = '$DB_URL/orders.json';
+    final url = '$DB_URL/orders.json?auth=$authToken';
     final timestamp = DateTime.now();
 
     final response = await http.post(
